@@ -1,0 +1,138 @@
+# =============================================================================
+# AeroMind 2026 — Cloud Build CI/CD Pipeline
+# Builds and deploys backend + frontend to Cloud Run automatically
+#
+# Created for the purposes of entering the Google Gemini Live Agent Hackathon.
+# #GeminiLiveAgentChallenge
+#
+# Google Cloud services used:
+#   - Vertex AI  (Gemini 2.5 Flash: text, TTS, Gemini Live API)
+#   - Cloud Run  (backend FastAPI + frontend Nginx)
+#   - Compute Engine (Memgraph graph database)
+#   - Artifact Registry (container images)
+#   - Secret Manager (API keys)
+#   - Cloud Storage + Firestore (race state persistence)
+# =============================================================================
+
+substitutions:
+  _REGION: us-central1
+  _REPO: aeromind
+  _BACKEND_SERVICE: aeromind-backend
+  _FRONTEND_SERVICE: aeromind-frontend
+
+steps:
+  # 1. Build backend image
+  - name: gcr.io/cloud-builders/docker
+    id: build-backend
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/backend:$COMMIT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/backend:latest
+      - -f
+      - deploy/Dockerfile
+      - .
+
+  # 2. Push backend image
+  - name: gcr.io/cloud-builders/docker
+    id: push-backend
+    waitFor: [build-backend]
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/backend
+
+  # 3. Deploy backend to Cloud Run
+  #    min-instances=1 keeps race_loop() background task alive continuously
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy-backend
+    waitFor: [push-backend]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_BACKEND_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/backend:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=2Gi
+      - --cpu=2
+      - --min-instances=1
+      - --max-instances=3
+      - --timeout=3600
+      - --concurrency=100
+      - --set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,GOOGLE_CLOUD_PROJECT=GOOGLE_CLOUD_PROJECT:latest
+      - --set-env-vars=VERTEX_AI_LOCATION=${_REGION},GEMINI_AGENT_MODEL=gemini-2.5-flash,GEMINI_TTS_MODEL=gemini-2.5-flash-preview-tts,GEMINI_LIVE_MODEL=gemini-2.5-flash-native-audio-latest,GCS_BUCKET_NAME=aeromind-f1-data,OPENF1_SESSION_KEY=latest,MONTE_CARLO_SIMULATIONS=1000
+      - --quiet
+
+  # 4. Get backend URL to embed in frontend nginx proxy config
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: get-backend-url
+    waitFor: [deploy-backend]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        BACKEND_URL=$(gcloud run services describe ${_BACKEND_SERVICE} \
+          --region=${_REGION} \
+          --format='value(status.url)')
+        echo "Backend URL: $$BACKEND_URL"
+        echo "$$BACKEND_URL" > /workspace/backend_url.txt
+
+  # 5. Build frontend image (Nginx serving Vite build, proxies to backend)
+  - name: gcr.io/cloud-builders/docker
+    id: build-frontend
+    waitFor: [get-backend-url]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        BACKEND_URL=$(cat /workspace/backend_url.txt)
+        docker build \
+          -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend:$COMMIT_SHA \
+          -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend:latest \
+          --build-arg BACKEND_URL="$$BACKEND_URL" \
+          -f deploy/Dockerfile.frontend \
+          .
+
+  # 6. Push frontend image
+  - name: gcr.io/cloud-builders/docker
+    id: push-frontend
+    waitFor: [build-frontend]
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend
+
+  # 7. Deploy frontend to Cloud Run
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy-frontend
+    waitFor: [push-frontend]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        BACKEND_URL=$(cat /workspace/backend_url.txt)
+        gcloud run deploy ${_FRONTEND_SERVICE} \
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend:$COMMIT_SHA \
+          --region=${_REGION} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --port=8080 \
+          --memory=512Mi \
+          --cpu=1 \
+          --min-instances=0 \
+          --max-instances=5 \
+          --set-env-vars="BACKEND_URL=$$BACKEND_URL" \
+          --quiet
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/backend:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8

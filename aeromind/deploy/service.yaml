@@ -1,0 +1,29 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: aeromind
+  annotations:
+    run.googleapis.com/launch-stage: GA
+spec:
+  template:
+    spec:
+      containerConcurrency: 100
+      containers:
+        - image: gcr.io/PROJECT_ID/aeromind:latest
+          ports: 
+            - containerPort: 8080
+          env:
+            - name: OPENF1_SESSION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "openf1-session-key"
+                  key: "latest"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "gemini-api-key"
+                  key: "latest"
+          resources:
+            limits: 
+              memory: 2Gi
+              cpu: "2"

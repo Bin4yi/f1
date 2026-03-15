@@ -1,0 +1,81 @@
+# ============================================================
+# AeroMind 2026 — .gitignore
+# NEVER commit secrets, credentials, or local build artifacts
+# ============================================================
+
+# --- SECRETS (NEVER commit these) ---
+.env
+*.env
+.env.*
+credentials.json
+service-account*.json
+*-credentials.json
+gcloud-credentials.json
+*-application_default_credentials.json
+application_default_credentials.json
+**/application_default_credentials.json
+*.key.json
+*.p12
+*.pem
+secrets/
+secret.*
+
+# --- GCP Auth ---
+.config/gcloud/
+gcloud-key.json
+keyfile.json
+token.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+*.log
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+.vite/
+
+# --- Docker ---
+*.dockerignore
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+.cursor/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- GCP / Cloud ---
+.gcloud/
+.config/gcloud/
+gcloud-key.json
+
+# --- Testing / Coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+*.test.log
+
+# --- Misc ---
+*.bak
+*.tmp
+*.orig
+npm-debug.log*
+yarn-error.log*

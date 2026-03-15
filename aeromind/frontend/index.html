@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroMind 2026 | AI Pit Wall — Live F1 Intelligence</title>
+
+    <!-- F1 Official-Style Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;0,900;1,400&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="./src/index.css">
+</head>
+<body>
+
+    <!-- Three.js atmospheric background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- =====================================================================
+         SPLASH SCREEN — shown while systems initialise / no live race
+         Hidden by index.js once first snapshot data arrives
+         ===================================================================== -->
+    <div id="splash">
+        <!-- Top red stripe animation -->
+        <div class="splash-stripe"></div>
+        <div class="splash-stripe splash-stripe-2"></div>
+
+        <!-- Logo -->
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:32px;">
+            <div class="f1-logo" style="width:64px;height:42px;font-size:1.2rem;">F1</div>
+            <div>
+                <div class="splash-title">AEROMIND <span style="color:var(--f1-red);">2026</span></div>
+                <div class="splash-sub">AI PIT WALL · AUTONOMOUS RACE INTELLIGENCE</div>
+            </div>
+        </div>
+
+        <!-- Animated mini circuit with GSAP cars -->
+        <svg id="splash-track" width="560" height="130" viewBox="0 0 560 130">
+            <!-- Outer track -->
+            <path id="splash-path"
+                  d="M 60,65 C 60,30 120,15 200,20 C 280,25 330,15 400,20
+                     C 460,25 500,45 500,65 C 500,85 460,105 400,110
+                     C 330,115 280,105 200,110 C 120,115 60,100 60,65 Z"
+                  fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="22"
+                  stroke-linecap="round"/>
+            <!-- Inner track line -->
+            <path d="M 60,65 C 60,30 120,15 200,20 C 280,25 330,15 400,20
+                     C 460,25 500,45 500,65 C 500,85 460,105 400,110
+                     C 330,115 280,105 200,110 C 120,115 60,100 60,65 Z"
+                  fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"
+                  stroke-linecap="round"/>
+            <!-- Start/Finish line -->
+            <line x1="57" y1="55" x2="63" y2="75" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+            <!-- Cars (positioned by GSAP in index.js) -->
+            <g id="sc1"><circle r="9" fill="#E8002D" stroke="#000" stroke-width="1.5"/><text text-anchor="middle" dominant-baseline="central" font-family="Orbitron" font-size="6" font-weight="700" fill="#fff">16</text></g>
+            <g id="sc2"><circle r="9" fill="#3671C6" stroke="#000" stroke-width="1.5"/><text text-anchor="middle" dominant-baseline="central" font-family="Orbitron" font-size="6" font-weight="700" fill="#fff">1</text></g>
+            <g id="sc3"><circle r="9" fill="#FF8000" stroke="#000" stroke-width="1.5"/><text text-anchor="middle" dominant-baseline="central" font-family="Orbitron" font-size="6" font-weight="700" fill="#fff">4</text></g>
+            <g id="sc4"><circle r="8" fill="#27F4D2" stroke="#000" stroke-width="1.5"/><text text-anchor="middle" dominant-baseline="central" font-family="Orbitron" font-size="6" font-weight="700" fill="#000">44</text></g>
+        </svg>
+
+        <!-- Status message -->
+        <div class="splash-status-line">
+            <span class="splash-dot-pulse">●</span>
+            <span id="splash-msg">AWAITING LIVE SESSION</span>
+        </div>
+
+        <!-- System checklist -->
+        <div class="splash-checks">
+            <div class="splash-check" id="sc-memgraph">
+                <span class="sc-icon">⬡</span> MEMGRAPH GRAPH DB
+            </div>
+            <div class="splash-check" id="sc-aria">
+                <span class="sc-icon">⬡</span> ARIA VOICE ENGINE
+            </div>
+            <div class="splash-check" id="sc-adk">
+                <span class="sc-icon">⬡</span> ADK PIT WALL AGENTS
+            </div>
+            <div class="splash-check" id="sc-openf1">
+                <span class="sc-icon">⬡</span> RACE TELEMETRY
+            </div>
+        </div>
+
+        <!-- SESSION PICKER + LAUNCH — nothing starts until user clicks -->
+        <div style="margin-top:28px;width:100%;max-width:480px;">
+
+            <!-- Label -->
+            <div style="
+                font-family:'Orbitron',monospace; font-size:.52rem;
+                color:rgba(255,255,255,.35); letter-spacing:2px;
+                margin-bottom:8px; text-align:center;
+            ">SELECT RACE SESSION</div>
+
+            <!-- Dropdown -->
+            <select id="splash-race-select" class="splash-select">
+                <option value="demo">⚡ 2026 AUS GP SIMULATION</option>
+                <option value="latest">🔴 LATEST SESSION (LIVE)</option>
+                <optgroup label="── 2026 Season (SoC · New Regs) ──">
+                    <option value="11234">R01 AUS 2026 · Melbourne ✓</option>
+                    <option value="11245">R02 CHN 2026 · Shanghai ✓</option>
+                    <option value="11253">R03 JPN 2026 · Suzuka</option>
+                    <option value="11261">R04 BHR 2026 · Bahrain</option>
+                    <option value="11269">R05 KSA 2026 · Jeddah</option>
+                    <option value="11280">R06 MIA 2026 · Miami</option>
+                    <option value="11291">R07 CAN 2026 · Montréal</option>
+                    <option value="11299">R08 MON 2026 · Monte Carlo</option>
+                    <option value="11307">R09 ESP 2026 · Barcelona</option>
+                    <option value="11315">R10 AUT 2026 · Spielberg</option>
+                    <option value="11326">R11 GBR 2026 · Silverstone</option>
+                    <option value="11334">R12 BEL 2026 · Spa</option>
+                </optgroup>
+                <optgroup label="── 2025 Season (DRS · Classic Regs) ──">
+                    <option value="9693">R01 AUS 2025 · Melbourne</option>
+                    <option value="9998">R02 CHN 2025 · Shanghai</option>
+                    <option value="10006">R03 JPN 2025 · Suzuka</option>
+                    <option value="10014">R04 BHR 2025 · Bahrain</option>
+                    <option value="10022">R05 KSA 2025 · Jeddah</option>
+                    <option value="10033">R06 MIA 2025 · Miami</option>
+                    <option value="9987">R07 ITA 2025 · Imola</option>
+                    <option value="9979">R08 MON 2025 · Monaco</option>
+                    <option value="9971">R09 ESP 2025 · Barcelona</option>
+                    <option value="9963">R10 CAN 2025 · Montréal</option>
+                    <option value="9955">R11 AUT 2025 · Spielberg</option>
+                    <option value="9947">R12 GBR 2025 · Silverstone</option>
+                    <option value="9939">R13 BEL 2025 · Spa</option>
+                    <option value="9928">R14 HUN 2025 · Budapest</option>
+                    <option value="9920">R15 NED 2025 · Zandvoort</option>
+                    <option value="9912">R16 ITA 2025 · Monza</option>
+                    <option value="9904">R17 AZE 2025 · Baku</option>
+                    <option value="9896">R18 SGP 2025 · Singapore</option>
+                    <option value="9888">R19 USA 2025 · Austin</option>
+                    <option value="9877">R20 MEX 2025 · Mexico City</option>
+                    <option value="9869">R21 BRA 2025 · Interlagos</option>
+                    <option value="9858">R22 LVG 2025 · Las Vegas</option>
+                    <option value="9850">R23 QAT 2025 · Lusail</option>
+                    <option value="9839">R24 UAE 2025 · Abu Dhabi</option>
+                </optgroup>
+            </select>
+
+            <!-- Launch button -->
+            <button id="launch-btn" style="
+                width:100%; padding:15px;
+                background:linear-gradient(135deg,#E10600,#B00500);
+                border:none; color:#fff;
+                font-family:'Orbitron',monospace; font-size:.95rem;
+                font-weight:900; letter-spacing:3px; border-radius:3px;
+                cursor:pointer;
+                box-shadow:0 0 30px rgba(225,6,0,0.5),0 0 60px rgba(225,6,0,0.2);
+                animation:launch-pulse 1.8s ease-in-out infinite;
+                transition:transform .12s;
+            ">▶ &nbsp;LAUNCH RACE INTELLIGENCE</button>
+
+            <div style="
+                margin-top:9px; text-align:center;
+                font-family:'Orbitron',monospace; font-size:.45rem;
+                color:rgba(255,255,255,.2); letter-spacing:2px;
+            ">GEMINI AI · ADK PIT WALL · MEMGRAPH · LIVE F1 DATA</div>
+        </div>
+
+        <style>
+            @keyframes launch-pulse {
+                0%,100% { box-shadow:0 0 28px rgba(225,6,0,.5),0 0 55px rgba(225,6,0,.18); }
+                50%      { box-shadow:0 0 42px rgba(225,6,0,.85),0 0 80px rgba(225,6,0,.35); }
+            }
+            #launch-btn:hover  { transform:scale(1.02); }
+            #launch-btn:active { transform:scale(0.97); }
+            .splash-select {
+                width:100%; padding:10px 14px;
+                background:#0d0d1a;
+                border:1px solid rgba(225,6,0,0.5);
+                color:#fff;
+                font-family:'Orbitron',monospace; font-size:.6rem;
+                letter-spacing:.04em; border-radius:3px;
+                cursor:pointer; outline:none; margin-bottom:14px;
+                appearance:none; -webkit-appearance:none;
+            }
+            .splash-select option, .splash-select optgroup {
+                background:#0d0d1a; color:#fff;
+            }
+        </style>
+
+        <!-- Bottom tagline -->
+        <div class="splash-footer" style="margin-top:18px;">
+            Gemini 2.5 Flash · Vertex AI · Google ADK · Memgraph · F1 2026 Regulations
+        </div>
+    </div>
+
+    <!-- Top Bar -->
+    <header id="topbar">
+        <div class="tb-left">
+            <div class="f1-logo">F1</div>
+            <span class="tb-title">AeroMind <em>2026</em></span>
+        </div>
+        <div class="tb-center">
+            <span id="session-label" class="tb-session">DEMO SESSION</span>
+            <span id="live-badge" class="live-dot">● LIVE</span>
+        </div>
+        <div class="tb-right">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <select id="race-select"
+                    style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.2);
+                           color:#fff;font-family:Orbitron,sans-serif;font-size:0.58rem;
+                           padding:4px 8px;border-radius:2px;cursor:pointer;
+                           outline:none;letter-spacing:0.03em;max-width:200px;">
+                    <option value="demo">⚡ 2026 AUS GP SIMULATION</option>
+                    <option value="latest">🔴 LATEST SESSION (LIVE)</option>
+                    <optgroup label="── 2026 Season (SoC · New Regs) ──">
+                        <option value="11234">R01 AUS 2026 · Melbourne ✓</option>
+                        <option value="11245">R02 CHN 2026 · Shanghai ✓</option>
+                        <option value="11253">R03 JPN 2026 · Suzuka</option>
+                        <option value="11261">R04 BHR 2026 · Bahrain</option>
+                        <option value="11269">R05 KSA 2026 · Jeddah</option>
+                        <option value="11280">R06 MIA 2026 · Miami</option>
+                        <option value="11291">R07 CAN 2026 · Montréal</option>
+                        <option value="11299">R08 MON 2026 · Monte Carlo</option>
+                        <option value="11307">R09 ESP 2026 · Barcelona</option>
+                        <option value="11315">R10 AUT 2026 · Spielberg</option>
+                        <option value="11326">R11 GBR 2026 · Silverstone</option>
+                        <option value="11334">R12 BEL 2026 · Spa</option>
+                    </optgroup>
+                    <optgroup label="── 2025 Season (DRS · Classic Regs) ──">
+                        <option value="9693">R01 AUS 2025 · Melbourne</option>
+                        <option value="9998">R02 CHN 2025 · Shanghai</option>
+                        <option value="10006">R03 JPN 2025 · Suzuka</option>
+                        <option value="10014">R04 BHR 2025 · Bahrain</option>
+                        <option value="10022">R05 KSA 2025 · Jeddah</option>
+                        <option value="10033">R06 MIA 2025 · Miami</option>
+                        <option value="9987">R07 ITA 2025 · Imola</option>
+                        <option value="9979">R08 MON 2025 · Monaco</option>
+                        <option value="9971">R09 ESP 2025 · Barcelona</option>
+                        <option value="9963">R10 CAN 2025 · Montréal</option>
+                        <option value="9955">R11 AUT 2025 · Spielberg</option>
+                        <option value="9947">R12 GBR 2025 · Silverstone</option>
+                        <option value="9939">R13 BEL 2025 · Spa</option>
+                        <option value="9928">R14 HUN 2025 · Budapest</option>
+                        <option value="9920">R15 NED 2025 · Zandvoort</option>
+                        <option value="9912">R16 ITA 2025 · Monza</option>
+                        <option value="9904">R17 AZE 2025 · Baku</option>
+                        <option value="9896">R18 SGP 2025 · Singapore</option>
+                        <option value="9888">R19 USA 2025 · Austin</option>
+                        <option value="9877">R20 MEX 2025 · Mexico City</option>
+                        <option value="9869">R21 BRA 2025 · Interlagos</option>
+                        <option value="9858">R22 LVG 2025 · Las Vegas</option>
+                        <option value="9850">R23 QAT 2025 · Lusail</option>
+                        <option value="9839">R24 UAE 2025 · Abu Dhabi</option>
+                    </optgroup>
+                </select>
+                <button id="session-btn"
+                    style="background:var(--f1-red);border:none;color:#fff;
+                           font-family:Orbitron,sans-serif;font-size:0.6rem;font-weight:700;
+                           padding:4px 10px;border-radius:2px;cursor:pointer;letter-spacing:0.05em;">
+                    LOAD
+                </button>
+            </div>
+            <span class="tb-meta">Gemini AI · ADK Pit Wall · Memgraph</span>
+            <span id="clock" class="tb-clock">--:--:--</span>
+        </div>
+    </header>
+
+    <!-- Main grid: telemetry | track+graph | aria -->
+    <main id="app">
+        <!-- Left: Driver standings + telemetry -->
+        <section id="telemetry-mount"></section>
+
+        <!-- Center: Track map + Memgraph graph
+             Using CSS Grid fr-units — the ONLY reliable way to split fixed
+             proportions when the parent height comes from a CSS Grid cell.
+             flex % values don't resolve correctly in that scenario.        -->
+        <section id="center-col">
+            <div id="track-mount"></div>
+            <div id="graph-mount"></div>
+        </section>
+
+        <!-- Right: ARIA voice commentary -->
+        <section id="aria-panel-mount"></section>
+    </main>
+
+    <!-- Bottom bar: Chronicle feed -->
+    <footer id="chronicle-bar">
+        <div id="chronicle-panel-mount"></div>
+    </footer>
+
+    <script type="module" src="./src/index.js"></script>
+</body>
+</html>

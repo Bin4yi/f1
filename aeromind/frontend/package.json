@@ -1,0 +1,17 @@
+{
+  "name": "aeromind-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "latest",
+    "gsap": "latest",
+    "d3": "latest"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  }
+}
